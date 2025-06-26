@@ -19,7 +19,7 @@ Downloads all IIP press release PDFs from the MOSPI website, expanding all archi
 Scrapes Periodic Labour Force Survey (PLFS) reports and datasets from the MOSPI website, including all available PDF reports.
 
 ### `WPI_scraper.py`
-Automates the download of Wholesale Price Index (WPI) datasets and reports from MOSPI or related government sources.
+Automates the download of Wholesale Price Index (WPI) datasets and reports from MOSPI or related government sources.It also automates downloading of latest Core Infrastructure data.
 
 ### `commerce_gov.py`
 Scrapes trade and commerce data, such as export/import reports, from the official commerce ministry portal or related sources.
