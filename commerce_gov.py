@@ -5,6 +5,13 @@ import urllib.parse
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
+import shutil
+import glob
+import re
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import Select, WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import UnexpectedAlertPresentException
 
 # ---------- CONFIG ----------
 SITE_NAME = "commerce.gov.in"
@@ -61,4 +68,105 @@ else:
         except Exception as e:
             print(f"❌ Error downloading {link}: {e}")
 
+driver.quit()
+
+
+
+
+# --- Get user input ---
+month = input("Enter month (e.g., May): ")
+year = input("Enter year (e.g., 2025): ")
+folder_name = f"{month}_{year}"
+os.makedirs(folder_name, exist_ok=True)
+
+month_map = {
+    "January": "1", "February": "2", "March": "3", "April": "4", "May": "5",
+    "June": "6", "July": "7", "August": "8", "September": "9",
+    "October": "10", "November": "11", "December": "12"
+}
+month_val = month_map[month]
+
+# --- Absolute download folder ---
+download_path = os.path.abspath(folder_name)
+
+# --- Browser Setup ---
+options = webdriver.ChromeOptions()
+options.add_experimental_option("prefs", {
+    "download.default_directory": download_path,
+    "download.prompt_for_download": False,
+    "plugins.always_open_pdf_externally": True
+})
+driver = webdriver.Chrome(options=options)
+wait = WebDriverWait(driver, 20)
+
+url = "https://tradestat.commerce.gov.in/meidb/principal_commodity_wise_all_HSCode_export"
+driver.get(url)
+
+# --- Set filters ---
+wait.until(EC.presence_of_element_located((By.ID, "pddMonth")))
+Select(driver.find_element(By.ID, "pddMonth"))\
+.select_by_value(month_val)
+Select(driver.find_element(By.ID, "pddYear")).select_by_visible_text(year)
+Select(driver.find_element(By.ID, "pddReportVal")).select_by_value("1")
+Select(driver.find_element(By.ID, "pddReportYear")).select_by_value("1")
+
+# --- Get commodity list ---
+commodity_select = Select(driver.find_element(By.ID, "pbrcitmdata"))
+commodities = [(opt.get_attribute("value"), opt.text)
+               for opt in commodity_select.options if opt.get_attribute("value") and opt.get_attribute("value") != "ZZ"]
+
+def sanitize_filename(name):
+    return re.sub(r'[^\w\-_\. ]', '_', name)
+
+for val, name in commodities:
+    print(f"🔄 {name}")
+    try:
+        # Re-select all filters after reload
+        Select(driver.find_element(By.ID, "pddMonth")).select_by_value(month_val)
+        Select(driver.find_element(By.ID, "pddYear")).select_by_visible_text(year)
+        Select(driver.find_element(By.ID, "pddReportVal")).select_by_value("1")
+        Select(driver.find_element(By.ID, "pddReportYear")).select_by_value("1")
+        Select(driver.find_element(By.ID, "pbrcitmdata")).select_by_value(val)
+
+        submit = driver.find_element(By.CSS_SELECTOR, "button[type='submit']")
+        driver.execute_script("arguments[0].click();", submit)
+
+        wait.until(EC.presence_of_element_located((By.CLASS_NAME, "buttons-pdf")))
+        pdf_btn = driver.find_element(By.CLASS_NAME, "buttons-pdf")
+        driver.execute_script("arguments[0].click();", pdf_btn)
+        print(f"📥 Triggered PDF download for {name}. Waiting...")
+
+        # Wait until the PDF finishes downloading
+        downloaded = False
+        timeout = 30  # seconds
+        start_time = time.time()
+
+        while time.time() - start_time < timeout:
+            pdf_files = glob.glob(os.path.join(download_path, "*.pdf"))
+            if pdf_files and not any(f.endswith(".crdownload") for f in pdf_files):
+                downloaded = True
+                break
+            time.sleep(0.5)
+
+        if downloaded:
+            pdf_files = glob.glob(os.path.join(download_path, "*.pdf"))
+            latest_file = max(pdf_files, key=os.path.getctime)
+            new_filename = sanitize_filename(name.strip()) + ".pdf"
+            new_path = os.path.join(download_path, new_filename)
+            os.rename(latest_file, new_path)
+            print(f"✅ Saved as {new_filename}")
+        else:
+            print(f"⚠️ Timed out waiting for download of {name}")
+
+    except UnexpectedAlertPresentException:
+        alert = driver.switch_to.alert
+        print(f"❌ Failed: {name} — Alert Text: {alert.text}")
+        alert.accept()
+    except Exception as e:
+        print(f"❌ Failed: {name} — {e}")
+
+    driver.get(url)
+    wait.until(EC.presence_of_element_located((By.ID, "pddMonth")))
+
+print("✅ Download attempts complete.")
 driver.quit()
