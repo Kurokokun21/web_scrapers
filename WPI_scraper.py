@@ -95,11 +95,13 @@ def ea_scraper(selector: string):
                         print("⚠️ No <a> tags found between the two sections.")
                 new_page.close()
 
-
         elif selector.lower()=='core':
             # add code to check for later years:
-            download_as_pdf('https://eaindustry.nic.in/eight_core_infra/Core_Industries_2011_12_20250620.xlsx', 'Core_Data')
+            page.locator('a#dropdown3').click()  # opens the dropdown
+            download_link = page.locator("ul.dropdown-menu[aria-labelledby='dropdown3'] a", has_text='Download Data').first
+            download_as_pdf('https://eaindustry.nic.in/'+download_link.get_attribute('href'), 'Core_Data')
 
 
+# Core for 7, WPI for 6
 ea_scraper('wpi')
 
