@@ -7,7 +7,7 @@ os.makedirs('mospi_downloads', exist_ok=True)
 
 def scrape_mospi_table_pdfs():
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)  # Use headless=True for speed!
+        browser = p.chromium.launch(headless=False)  # Use headless=True for speed!
         page = browser.new_page()
         url = "https://www.mospi.gov.in/download-reports?main_cat=ODU5&cat=All&sub_category=All"
         page.goto(url, wait_until='networkidle', timeout=60000)
