@@ -1,11 +1,9 @@
 import os
 import re
-import string
 import time
 
 import requests
-from playwright.sync_api import sync_playwright, Error, Page
-from bs4 import BeautifulSoup, Tag
+from playwright.sync_api import sync_playwright
 import mimetypes
 def sanitize_filename(name, max_length=100):
     # Replace invalid Windows filename characters with underscore
