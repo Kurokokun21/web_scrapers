@@ -24,6 +24,10 @@ Automates the download of Wholesale Price Index (WPI) datasets and reports from 
 ### `commerce_gov.py`
 Scrapes trade and commerce data, such as export/import reports, from the official commerce ministry portal or related sources.
 
+### `IMF_WEO_scraper.py`
+Scrapes IMF's dataset from its website.
+
+
 ---
 
 ## ⚙️ Features
