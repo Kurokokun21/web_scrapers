@@ -1,7 +1,33 @@
+import os
+import pdfkit
+
+folder_name = "cga_report"
+os.makedirs(folder_name, exist_ok=True)
+
 from urllib.parse import urlparse, urlunparse
 
 from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
+
+
+def pdf_converter(html , num):
+    # Step 0: Check if valid html
+    if "Server Error" in html.lower():
+        return
+    # --- Step 1: Final PDF file path ---
+    pdf_filename = os.path.join(folder_name, f"report_{num}.pdf")
+
+    # --- Step 2: wkhtmltopdf configuration (only needed on Windows) ---
+    # Change the path below if it's installed elsewhere
+    pdfkit_config = pdfkit.configuration(
+        wkhtmltopdf=r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe"
+    )
+
+    # --- Step 3: Convert HTML string to PDF ---
+    pdfkit.from_string(html, pdf_filename, configuration=pdfkit_config)
+
+    print(f"✅ PDF saved at: {pdf_filename}")
+
 
 def cga_scr():
     with sync_playwright() as p:
@@ -57,7 +83,8 @@ def cga_scr():
                 '', '', ''
             ))
             unique_links.add(clean_url)
-        print(unique_links)
+        for link in unique_links:
+            print(link)
 
         for link in unique_links:
             if not str(link).startswith('http'):
@@ -67,6 +94,10 @@ def cga_scr():
             html_codes.append(page.content())
 
         # html_codes stores the codes of all the html pages
+        count = 1
+        for code in html_codes:
+            pdf_converter(code, count)
+            count+=1
 
 
 cga_scr()
