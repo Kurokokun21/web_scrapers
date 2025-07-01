@@ -41,6 +41,7 @@ Navigates to the commerce.gov.in Trade Statistics section, downloads available r
 
 ### `CGA_scrapper.py`
 Navigates to the cga.nic.in and downloads monthly fiscal accounts (of Union Govt) in pdf format as reports.
+
 ---
 
 ## ▶️ How to Run
@@ -119,7 +120,7 @@ playwright install
 ## 🧑‍💻 Maintainer
 
 **Rahul Sharma**  
-**Parth Surekha**
+**Parth Surekha** 
 **Chirantan S**
 
 ---
