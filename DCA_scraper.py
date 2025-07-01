@@ -1,12 +1,10 @@
 import os
-import re
 import shutil
 import time
-import string
 
-import requests
-from playwright.sync_api import sync_playwright, Page
+from playwright.sync_api import sync_playwright
 from datetime import date, timedelta
+
 
 def on_popup(new_page):
     folder_name = f"DCA_Data"
