@@ -39,6 +39,8 @@ Scrapes Wholesale Price Index data by navigating to eaindustry.nic.in. It iterat
 ### `commerce_gov.py`
 Navigates to the commerce.gov.in Trade Statistics section, downloads available reports and policy documents in PDF or Excel formats.
 
+### `CGA_scrapper.py`
+Navigates to the cga.nic.in and downloads monthly fiscal accounts (of Union Govt) in pdf format as reports.
 ---
 
 ## ▶️ How to Run
@@ -96,19 +98,6 @@ Each subfolder may contain:
 
 ---
 
-## 💻 Sample Script Logic – CPI Scraper
-
-Steps from `cpi_all_india_item.py`:
-1. Go to [https://cpi.mospi.gov.in](https://cpi.mospi.gov.in)
-2. Hover over *All India Item Index*
-3. Click on the link for Combined Index (2012 base)
-4. Select all items from the listbox
-5. Choose the latest year and month from dropdowns
-6. Click *View Indices* → Export to Excel
-7. Save the file
-
----
-
 ## 🛠 Requirements
 
 - Python 3.8+
@@ -116,6 +105,8 @@ Steps from `cpi_all_india_item.py`:
 - pandas
 - requests
 - beautifulsoup4
+- pdfkit
+- wkhtmltopdf
 
 Run the following to install:
 ```bash
@@ -128,8 +119,8 @@ playwright install
 ## 🧑‍💻 Maintainer
 
 **Rahul Sharma**  
-BITS Pilani, Computer Science  
-GitHub: [@Kurokokun21](https://github.com/Kurokokun21)
+**Parth Surekha**
+**Chirantan S**
 
 ---
 
