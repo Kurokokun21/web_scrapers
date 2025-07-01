@@ -120,7 +120,7 @@ playwright install
 ## 🧑‍💻 Maintainer
 
 **Rahul Sharma**  
-**Parth Surekha** 
+**Parth Surekha**  
 **Chirantan S**
 
 ---
