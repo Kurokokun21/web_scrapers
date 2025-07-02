@@ -1,0 +1,8 @@
+Download tesseract from : https://github.com/UB-Mannheim/tesseract/wiki
+
+Download pytesseract library (latest version)
+
+Download pillow 11.1.0
+
+Add tesseract to path for it to run on program/ Change the code to the path where tesseract.exe file is
+
