@@ -61,7 +61,7 @@ def save_json(data: str, name: str):
 def download_market_data(page: Page, calender_icon: string = 'input#ctl00_SuperMainContent_imbFrmDate', prev_arrow: string ="#ctl00_SuperMainContent_cleFrmDealDate_prevArrow", next_arrow: string = "#ctl00_SuperMainContent_cleFrmDealDate_nextArrow"):
     fill_date = date.today() - timedelta(days=30)
     if calender_icon is None:
-        calender_icon = 'input#ctl00_SuperMainContent_imbFrmDate'
+        calender_icon += 'input#ctl00_SuperMainContent_imbFrmDate'
     if prev_arrow is None:
         prev_arrow = "#ctl00_SuperMainContent_cleFrmDealDate_prevArrow"
     if next_arrow is None:
@@ -168,12 +168,60 @@ def ccil_scraper():
                 # Check if page already has table
                 soup = BeautifulSoup(page.content(), "html.parser")
                 table = str(soup.find('table'))
-                if table!='None':
-                    # Call the json_converter() function with the html in the form of a string to convert it to json.. it returns a json file that can be stored
-                    table_json = json_converter(table)
+                if table != 'None':
+                    # Select max no of entries:
+                    selector = "select:not(.form-control)"
+                    # Grab all <option> elements inside your select
+                    options = page.query_selector_all(f"{selector} option")
+                    max_val = None
+
+                    for option in options:
+                        val = option.get_attribute("value")
+                        try:
+                            num = int(val)
+                            if max_val is None or num > max_val:
+                                max_val = num
+                        except (TypeError, ValueError):
+                            continue
+
+                    if max_val is not None:
+                        print(f"Selecting option with highest value: {max_val}")
+                        page.select_option(selector, value=str(max_val))
+                    else:
+                        print("No valid options found")
+                    # Get no of pages
+                    page_txt = soup.find('div', class_='dataTables_info').text
+                    match = re.search(r'of\s+(\d+)\s+entries', page_txt)
+                    num_pages = 0
+                    if match and max_val is not None:
+                        num_pages = int(match.group(1))//max_val # max_val = no of entries in a page
+
+                    print('No. of pages: '+str(num_pages))
+                    table_json = ""
+                    for i in range(num_pages+1):
+                        # Call the json_converter() function with the html in the form of a string to convert it to json.. it returns a json file that can be stored
+                        if i == 0:
+                            table_json = json_converter(table)
+                        else:
+                            # Handle pagination: click '>'
+                            nxt_btns = page.query_selector_all('a.paginate_button.next')
+                            for btn in nxt_btns:
+                                if btn.is_visible():
+                                    btn.click()
+                                    break
+                            else:
+                                print("No visible 'next' button found!")
+                            page.wait_for_timeout(5000)
+                            sp = BeautifulSoup(page.content(), 'html.parser')
+                            # Reload table
+                            table = str(sp.find('table'))
+                            list1 = json.loads(table_json)
+                            list2 = json.loads(json_converter(table))
+                            list1 += list2
+                            table_json = json.dumps(list1, indent=2)
+
                     save_json(table_json, file_name)
                     print(f"table at: {page.url} saved successfully")
-                    # Handle pagination
                     continue
                 elif not soup.find('div', class_=['layout-frame', 'mr-1']).get_text(strip=True):
                     print(f'No text found at: {page.url}. Continuing...')
@@ -225,21 +273,45 @@ def ccil_scraper():
                     page.wait_for_load_state('domcontentloaded')
                     time.sleep(2)
 
+                # Get number of pages
                 soup = BeautifulSoup(page.content(), 'html.parser')
+                text = soup.find('span', id='page_total').text
+                text = text.replace('\u00A0', ' ').replace('&nbsp;', ' ')
+                match = re.search(r'of\s+(\d+)', text, re.IGNORECASE)
+                num_pages = 0
+                if match:
+                    num_pages = int(match.group(1))
+                    print(num_pages)
+                else:
+                    print("No match found for number of pages")
+                    continue
                 table = str(soup.find('table', id='JR_PAGE_ANCHOR_0_1'))
-                if table!='None':
-                    # Call the json_converter() function with the html in the form of a string to convert it to json.. it returns a json file that can be stored
-                    table_json = json_converter(table)
+                # get data:
+                if table != 'None':
+                    for i in range(num_pages):
+                        # Call the json_converter() function with the html in the form of a string to convert it to json.. it returns a json file that can be stored
+                        if i == 0:
+                            table_json = json_converter(table)
+                        else:
+                            # Handle pagination: type next page and press enter
+                            page.fill('input#page_current', str(i+1))
+                            page.keyboard.press("Enter")
+                            page.wait_for_timeout(2000)
+                            sp = BeautifulSoup(page.content(), 'html.parser')
+                            # Reload table
+                            table = str(sp.find('table', id='JR_PAGE_ANCHOR_0_'+str(i+1)))
+                            list1 = json.loads(table_json)
+                            list2 = json.loads(json_converter(table))
+                            list1 += list2
+                            table_json = json.dumps(list1, indent=2)
+
                     save_json(table_json, file_name)
                     print(f"table at: {page.url} saved successfully")
-                    # Handle pagination
                 else:
-                    print(f'Table at {page.url} not found')
+                    print('Table not found')
 
             time.sleep(2)
 
-
-        time.sleep(10)
         page.close()
         context.close()
         browser.close()
