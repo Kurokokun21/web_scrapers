@@ -46,7 +46,7 @@ def json_converter(html):
 
 def get_calendar_month_title(page: Page):
     try:
-        return page.inner_text("#ctl00_SuperMainContent_cleFrmDealDate_title")
+        return page.inner_text("#ctl00_SuperMainContent_cleFrmDealDate_title", timeout=1000)
     except Error as e:
         return page.inner_text("#ctl00_SuperMainContent_txtFrmDealDate_CalendarExtender_title")
 
@@ -59,7 +59,8 @@ def save_json(data: str, name: str):
 
 
 def download_market_data(page: Page, calender_icon: string = 'input#ctl00_SuperMainContent_imbFrmDate', prev_arrow: string ="#ctl00_SuperMainContent_cleFrmDealDate_prevArrow", next_arrow: string = "#ctl00_SuperMainContent_cleFrmDealDate_nextArrow"):
-    fill_date = date.today() - timedelta(days=30)
+    filename = (page.url.split('/')[-1]).split('.')[0]
+    fill_date = date.today() - timedelta(days=7)
     if calender_icon is None:
         calender_icon += 'input#ctl00_SuperMainContent_imbFrmDate'
     if prev_arrow is None:
@@ -100,7 +101,7 @@ def download_market_data(page: Page, calender_icon: string = 'input#ctl00_SuperM
     download = download_info.value
     temp_file_path = download.path()
     download_path = os.path.abspath("CCIL_India_Data")
-    final_file_path = os.path.join(download_path, temp_file_path.name) + ".xls"
+    final_file_path = os.path.join(download_path, filename) + ".xls"
     shutil.move(temp_file_path, final_file_path)
 
 
@@ -123,14 +124,13 @@ def ccil_scraper():
 
         folder_name = f"CCIL_India_Data"
         os.makedirs(folder_name, exist_ok=True)
-
         for link in links:
             page.goto(link)
             page.wait_for_load_state('domcontentloaded')
             print('Visiting: '+link)
             # For selected websites which require further navigation:
             if link == 'https://www.ccilindia.com/web/ccil/primary-and-secondary-market':
-                """
+
                 soup = BeautifulSoup(page.content(), "html.parser")
                 table_link = soup.find("table")
                 for a in table_link.find_all("a", href=True):
@@ -138,7 +138,6 @@ def ccil_scraper():
                     page.wait_for_load_state('domcontentloaded')
                     time.sleep(1)
                     # get the ids for relevant extraction:
-                    print(page.content())
                     sp = BeautifulSoup(page.content(), "html.parser")
                     # for div in sp.find_all("div"):
                     #     if div.has_attr("class"):
@@ -156,11 +155,8 @@ def ccil_scraper():
                     prev_arrow = sp.find("div", class_=re.compile(r"ajax__calendar_prev"))
                     if prev_arrow and prev_arrow.has_attr("id"):
                         prev_arrow = '#'+prev_arrow['id']
-                    print(calender_icon)
-                    print(next_arrow)
-                    print(prev_arrow)
                     download_market_data(page=page, calender_icon=calender_icon, prev_arrow=prev_arrow, next_arrow=next_arrow)
-                    """
+                    print('Tables saved successfully')
             else:
                 # Get filename from url
                 file_name = page.url.split('/')[-1]
