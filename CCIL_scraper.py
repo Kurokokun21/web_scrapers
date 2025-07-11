@@ -105,22 +105,25 @@ def download_market_data(page: Page, calender_icon: string = 'input#ctl00_SuperM
     shutil.move(temp_file_path, final_file_path)
 
 
-def ccil_scraper():
+def ccil_scraper(l: list[str]):
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=False, slow_mo=300)
         context = browser.new_context(
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36"
         )
         page = context.new_page()
-        page.goto('https://www.ccilindia.com/web/ccil/home')
-        page.wait_for_load_state('domcontentloaded')
-        html = page.content()
-        soup = BeautifulSoup(html, "html.parser")
-        target_li = soup.select("li.nav-item.dropdown.megamenu")
         links = []
-        for a in target_li[3].find_all("a", href=True):
-            if a['href'] != '':
-                links.append(a['href'])
+        if not l:
+            page.goto('https://www.ccilindia.com/web/ccil/home')
+            page.wait_for_load_state('domcontentloaded')
+            html = page.content()
+            soup = BeautifulSoup(html, "html.parser")
+            target_li = soup.select("li.nav-item.dropdown.megamenu")
+            for a in target_li[3].find_all("a", href=True):
+                if a['href'] != '':
+                    links.append(a['href'])
+        else:
+            links = l
 
         folder_name = f"CCIL_India_Data"
         os.makedirs(folder_name, exist_ok=True)
@@ -312,4 +315,5 @@ def ccil_scraper():
         context.close()
         browser.close()
 
-ccil_scraper()
+
+# ccil_scraper([])
