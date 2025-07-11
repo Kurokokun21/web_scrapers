@@ -29,10 +29,10 @@ def json_converter(html):
 
     else:
         rows = table.find_all('tr')
-        # Skip first two non-functional rows
-        if len(rows) <= 2:
+        # Skip first two non-functional rows and the header
+        if len(rows) <= 3:
             raise ValueError("Table does not have enough rows after skipping two.")
-        header_cells = rows[2].find_all(['td', 'th'])
+        header_cells = rows[3].find_all(['td', 'th'])
         headers = [cell.get_text(strip=True) for cell in header_cells]
         for row in rows[3:]:  # start from row 4 (index 3)
             cells = row.find_all(['td', 'th'])
@@ -86,7 +86,6 @@ def api_call_data(url: string, form_data: dict[str, str], headers: dict[str, str
 
 
 def ccil_scraper_2():
-    """
     # To avoid syncing issues with playwright:
     # For 3rd website:
     # https://www.ccilindia.com/web/ccil/client-bondfra -> archival data already collected by prev scraper, can be adjusted if necessary
@@ -94,16 +93,16 @@ def ccil_scraper_2():
     print()
     print('Done with 3rd website. Continuing...')
     print()
-    """
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False, slow_mo=300)
+        browser = p.chromium.launch(headless=True, slow_mo=300)
         context = browser.new_context(
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36"
         )
         page = context.new_page()
         date1 = (date.today() - timedelta(days=30)).isoformat()
         date2 = (date.today()).isoformat()
+        print('Running...')
 
         # 1st website -> API call
         form_data = {

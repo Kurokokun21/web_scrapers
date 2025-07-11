@@ -107,7 +107,7 @@ def download_market_data(page: Page, calender_icon: string = 'input#ctl00_SuperM
 
 def ccil_scraper(l: list[str]):
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False, slow_mo=300)
+        browser = p.chromium.launch(headless=True, slow_mo=300)
         context = browser.new_context(
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36"
         )
@@ -316,4 +316,5 @@ def ccil_scraper(l: list[str]):
         browser.close()
 
 
-# ccil_scraper([])
+if __name__ == '__main__':
+    ccil_scraper([])
