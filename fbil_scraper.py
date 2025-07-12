@@ -11,7 +11,7 @@ def fill_date_input(date_obj, input_field, page):
     formatted = date_obj.strftime("%d/%m/%Y")
     page.keyboard.type(formatted, delay=100)
 
-def fbil_scraper():
+def fbil_scraper(time_interval: int):
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=False, slow_mo=200)
         context = browser.new_context(accept_downloads=True)
@@ -24,7 +24,7 @@ def fbil_scraper():
         # Fill From & To date
         date_inputs = page.locator("input[placeholder='DD-MM-YYYY']")
         visible_inputs = [date_inputs.nth(i) for i in range(date_inputs.count()) if date_inputs.nth(i).is_visible()]
-        fill_date_input(date.today() - timedelta(days=30), visible_inputs[0], page)
+        fill_date_input(date.today() - timedelta(days=time_interval), visible_inputs[0], page)
         fill_date_input(date.today(), visible_inputs[1], page)
 
         # Click Fetch
@@ -58,39 +58,44 @@ def fbil_scraper():
             file_base_name = f"{date_text.replace(' ', '_')}.xlsx"
             print(f"Processing: {file_base_name}")
 
-            # Click link
-            link = row.locator("a", has_text="FBIL GOI Prices")
-            try:
-                link.click()
-                page.wait_for_selector("#downloadPrompt", state="visible", timeout=5000)
-
-                # Locate the Download Excel button by icon
-                download_button = page.locator("button:has(.fa-file-excel-o)")
-                download_button.wait_for(state="visible", timeout=5000)
-
-                # Start download
-                with page.expect_download() as download_info:
-                    download_button.click()
-
-                download = download_info.value
-                download.save_as(os.path.join(DOWNLOAD_DIR, file_base_name))
-                print(f"✅ Saved: {file_base_name}")
-
-            except Exception as e:
-                print(f"❌ Download failed for {date_text}: {e}")
-
-            finally:
-                # Try to close modal always
+            retries = 5
+            for attempt in range(retries):
+                # Click link
+                link = row.locator("a", has_text="FBIL GOI Prices")
                 try:
-                    close_btn = page.locator("button[data-dismiss='modal']")
-                    if close_btn.is_visible():
-                        close_btn.click()
-                        page.wait_for_selector("#downloadPrompt", state="hidden", timeout=5000)
-                except:
-                    pass
+                    link.click()
+                    page.wait_for_selector("#downloadPrompt", state="visible", timeout=5000)
+
+                    # Locate the Download Excel button by icon
+                    download_button = page.locator("button:has(.fa-file-excel-o)")
+                    download_button.wait_for(state="visible", timeout=5000)
+
+                    # Start download
+                    with page.expect_download() as download_info:
+                        download_button.click()
+
+                    download = download_info.value
+                    download.save_as(os.path.join(DOWNLOAD_DIR, file_base_name))
+                    print(f"✅ Saved: {file_base_name}")
+
+                except Exception as e:
+                    print(f"❌ Download failed for {date_text}: {e}")
+                    print("Retrying...")
+                    continue
+
+                finally:
+                    # Try to close modal always
+                    try:
+                        close_btn = page.locator("button[data-dismiss='modal']")
+                        if close_btn.is_visible():
+                            close_btn.click()
+                            page.wait_for_selector("#downloadPrompt", state="hidden", timeout=5000)
+                    except:
+                        pass
+                    break
 
         page.close()
         context.close()
         browser.close()
 
-fbil_scraper()
+fbil_scraper(time_interval=30) # time_interval in days

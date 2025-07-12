@@ -85,7 +85,7 @@ def api_call_data(url: string, form_data: dict[str, str], headers: dict[str, str
     save_json(data=combined_data, name=filename)
 
 
-def ccil_scraper_2():
+def ccil_scraper_2(time_interval: int):
     # To avoid syncing issues with playwright:
     # For 3rd website:
     # https://www.ccilindia.com/web/ccil/client-bondfra -> archival data already collected by prev scraper, can be adjusted if necessary
@@ -149,8 +149,8 @@ def ccil_scraper_2():
             "columns[0][orderable]": "false",
             "columns[0][search][value]": "",
             "columns[0][search][regex]": "false",
-            "_SecurityWiseRepoMarketSummaryMvc_SecurityWiseRepoMarketSummaryMvcPortlet_INSTANCE_rcai_fromDate1": "2025-06-10",
-            "_SecurityWiseRepoMarketSummaryMvc_SecurityWiseRepoMarketSummaryMvcPortlet_INSTANCE_rcai_toDate1": "2025-07-10",
+            "_SecurityWiseRepoMarketSummaryMvc_SecurityWiseRepoMarketSummaryMvcPortlet_INSTANCE_rcai_fromDate1": (date.today()-timedelta(days=time_interval)).isoformat(),
+            "_SecurityWiseRepoMarketSummaryMvc_SecurityWiseRepoMarketSummaryMvcPortlet_INSTANCE_rcai_toDate1": date.today().isoformat(),
             "_SecurityWiseRepoMarketSummaryMvc_SecurityWiseRepoMarketSummaryMvcPortlet_INSTANCE_rcai_searchClicked": "true"
         }
 
@@ -162,7 +162,7 @@ def ccil_scraper_2():
 
         # For 4th website:
         page.goto('https://www.ccilindia.com/web/ccil/client-inr-interest-rate-trades')
-        fill_date(page=page, current_date=date.today()-timedelta(days=30), to_id='from')
+        fill_date(page=page, current_date=date.today()-timedelta(days=time_interval), to_id='from')
         fill_date(page=page, current_date=date.today(), to_id='to')
         # Click apply
         page.click('button.t1')
@@ -228,4 +228,4 @@ def ccil_scraper_2():
         browser.close()
 
 
-ccil_scraper_2()
+ccil_scraper_2(time_interval=30)
