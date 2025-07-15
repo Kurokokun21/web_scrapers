@@ -44,43 +44,55 @@ def brics_scraper(api_key: str):
         page.click(selector) # To move focus to textbox
         page.fill(selector, "")
         fill_date(page=page, current_date=date.today()-timedelta(days=7))
-        # CLick the button which shows CAPTCHA
-        # page.click('//button[@onclick="javascript:showCaptcha()"] >> nth=1')
-        # page.click('//*[@id="frmSearch"]/fieldset[1]/div[1]/div[7]/div/button[2]')
-        page.click('//button[@onclick="javascript:showCaptcha()"]')
+        attempt = 0
+        while True:
+            attempt += 1
+            print(f"\nAttempt #{attempt}")
+            # CLick the button which shows CAPTCHA
+            page.click('//button[@onclick="javascript:showCaptcha()"]')
 
-        # Locate the image
-        img_element = page.locator("img#imgCaptchaModal")
+            # Locate the image
+            img_element = page.locator("img#imgCaptchaModal")
 
-        # Take a screenshot of just the element (no need to crop manually!)
-        img_element.screenshot(path="cropped_image.png")
-        # Load your image
-        img = Image.open("cropped_image.png")
+            # Take a screenshot of just the element (no need to crop manually!)
+            img_element.screenshot(path="cropped_image.png")
+            # Load your image
+            img = Image.open("cropped_image.png")
 
-        response = model.generate_content([
-            "What text is in this image?",
-            img
-        ])
+            response = model.generate_content([
+                "What text is in this image? The image has only capital letters, small letters and numbers.",
+                img
+            ])
 
-        print("Extracted text:", response.text)
-        captcha_box = page.locator('//*[@id="captcha"]')
-        captcha_box.click()  # to move focus to it
-        page.keyboard.type(response.text, delay=300)
-        page.keyboard.press("Enter")
-        page.wait_for_load_state('domcontentloaded')
-        download_path = "BRICS_NSE_Data"
-        os.makedirs(download_path, exist_ok=True)
-        # input("Page has stopped loading?")
-        with page.expect_download() as download_info:
+            print("Extracted text:", response.text)
+            captcha_box = page.locator('//*[@id="captcha"]')
+            captcha_box.click()  # to move focus to it
+            page.keyboard.type(response.text, delay=300)
             page.keyboard.press("Enter")
-        download = download_info.value
-        save_path = os.path.join(download_path, download.suggested_filename)
-        download.save_as(save_path)
-        print(f"File downloaded to: {save_path}")
+            try:
+                page.wait_for_load_state('domcontentloaded')
+                download_path = "BRICS_NSE_Data"
+                os.makedirs(download_path, exist_ok=True)
+                with page.expect_download() as download_info:
+                    page.keyboard.press("Enter")
+                download = download_info.value
+                file_name = download.suggested_filename
+                if file_name.strip().lower() == "error.txt":
+                    print("Got error.txt file. Retrying...")
+                    time.sleep(2)
+                    continue
+                save_path = os.path.join(download_path, file_name)
+                download.save_as(save_path)
+                print(f"File downloaded to: {save_path}")
+            except Error as e:
+                print(e)
+                print("Encountered an error. Exiting...")
+            break
         # Save the data
-    page.close()
-    context.close()
-    browser.close()
+        time.sleep(5)
+        page.close()
+        context.close()
+        browser.close()
 
 
 brics_scraper(api_key="")
