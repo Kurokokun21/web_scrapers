@@ -8,7 +8,7 @@ from PIL import Image
 import pytesseract
 
 # Set this to the path of your Tesseract.exe file:
-pytesseract.pytesseract.tesseract_cmd = r"C:\Users\schir\AppData\Local\Programs\Tesseract-OCR\tesseract.exe"
+# pytesseract.pytesseract.tesseract_cmd = r"C:\Users\schir\AppData\Local\Programs\Tesseract-OCR\tesseract.exe"
 
 
 
