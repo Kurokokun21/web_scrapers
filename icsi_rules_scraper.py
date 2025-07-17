@@ -1,81 +1,83 @@
 import os
+import time
 from pathlib import Path
 from playwright.sync_api import sync_playwright
-from fpdf import FPDF
+from bs4 import BeautifulSoup
+import pdfkit
+import requests
+from urllib.parse import urljoin
 
-# Create output folder
+# wkhtmltopdf setup
+path_wkhtmltopdf = r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe"
+config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
+
+# Output directory
 output_dir = Path("ICSI_rules")
 output_dir.mkdir(exist_ok=True)
 
-# Sanitize filename for Windows
+# Sanitize filename
 def sanitize_filename(name):
     return "".join(c if c.isalnum() or c in " ._-()" else "_" for c in name).strip()
 
-# Save content as PDF
-def save_pdf(content, filename):
-    pdf = FPDF()
-    pdf.set_auto_page_break(auto=True, margin=15)
-    pdf.add_page()
-    pdf.set_font("Arial", size=12)
-    for line in content.splitlines():
-        pdf.multi_cell(0, 10, line)
-    pdf.output(output_dir / filename)
-
-# Main scraper logic
+# Main scraper
 with sync_playwright() as p:
     browser = p.chromium.launch(headless=False)
     page = browser.new_page()
     page.goto("https://e-book.icsi.edu/Default.aspx?page=rules")
     page.wait_for_load_state('domcontentloaded')
-    
-    # Optional debug
-    page.screenshot(path="debug.png")
-
-    # Wait for the table of rules to load
-    # page.wait_for_selector("table#testTable", timeout=60000)
     page.wait_for_selector("table#rg_rules_ctl00", timeout=60000)
 
     rule_rows = page.locator("table#rg_rules_ctl00 tbody tr")
     total_rules = rule_rows.count()
-    print(rule_rows.count())
 
     for i in range(total_rules):
+        print(f"🔹 Clicking Rule Row #{i}")
         page.click(f"#rg_rules_ctl00__{i}")
+        time.sleep(2)
 
-        # Change the selectors here:
-        page.wait_for_selector(f"table#rg_rules_ctl00__{i}", timeout=60000)  # Wait for sub-rule table
-        
-        # Now on sub-rules table
-        # page.wait_for_selector(f"table#rg_rules_ctl00__{i}")
-        sub_rows = page.locator(f"table#rg_rules_ctl00__{i} tbody tr")
-        sub_count = sub_rows.count()
+        subrule_rows = page.locator("table#rg_rules_ctl00 tbody tr")
+        total_subrules = subrule_rows.count()
 
-        for j in range(sub_count):
+        for j in range(total_subrules):
             sub_rows = page.locator("table#rg_rules_ctl00 tbody tr")  # Refresh
             sub_row = sub_rows.nth(j)
             sub_title = sub_row.inner_text().strip()
             print(f"   🔸 Clicking Sub-Rule: {sub_title}")
+            sub_row.click()
+            time.sleep(2)
 
-            with page.expect_popup() as iframe_modal_opened:
-                sub_row.click()
+            # Get the iframe's src
+            soup = BeautifulSoup(page.content(), "html.parser")
+            iframe_tag = soup.find('iframe', {"name": "RadWindow1"})
 
-            iframe = page.frame_locator("iframe").frame()
-            iframe.wait_for_selector("body")
-            content = iframe.inner_text("body")
+            if not iframe_tag:
+                print("      ❌ No iframe found.")
+                continue
 
-            # Save to PDF
-            filename = sanitize_filename(f"{sub_title}.pdf")
-            save_pdf(content, filename)
-            print(f"      ✅ Saved to {filename}")
+            src = iframe_tag.get('src')
+            absolute_src = urljoin("https://e-book.icsi.edu/", src)
 
-            # Close the iframe modal
-            page.click("a.rwCloseButton")
-            page.wait_for_selector("iframe", state="detached")
+            try:
+                response = requests.get(absolute_src)
+                response.raise_for_status()
+                html = response.text
 
-        # Go back to main rules page
-        page.go_back()
-        page.wait_for_selector("table#testTable")
+                filename = sanitize_filename(sub_title) + ".pdf"
+                output_path = output_dir / filename
+                pdfkit.from_string(html, str(output_path), configuration=config)
 
+                print(f"      ✅ Saved to {filename}")
+            except Exception as e:
+                print(f"      ❌ Error saving PDF for {sub_title}: {e}")
+
+            # Close the modal popup
+            try:
+                page.click("a.rwCloseButton")
+                page.wait_for_selector("iframe[name='RadWindow1']", state="detached", timeout=10000)
+            except:
+                print("      ⚠️ Could not close modal cleanly, continuing...")
+        
     print("✅ All rules scraped.")
     browser.close()
+
 
