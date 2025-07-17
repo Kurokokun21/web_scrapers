@@ -31,6 +31,7 @@ with sync_playwright() as p:
     total_rules = rule_rows.count()
 
     for i in range(total_rules):
+        page.goto("https://e-book.icsi.edu/Default.aspx?page=rules")
         print(f"🔹 Clicking Rule Row #{i}")
         page.click(f"#rg_rules_ctl00__{i}")
         time.sleep(2)
