@@ -73,8 +73,8 @@ with sync_playwright() as p:
 
             # Close the modal popup
             try:
-                page.click("a.rwCloseButton")
                 page.wait_for_selector("iframe[name='RadWindow1']", state="detached", timeout=10000)
+                page.click("a.rwCloseButton")
             except:
                 print("      ⚠️ Could not close modal cleanly, continuing...")
         
