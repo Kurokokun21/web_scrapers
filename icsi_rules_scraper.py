@@ -23,69 +23,75 @@ def sanitize_filename(name):
 with sync_playwright() as p:
     browser = p.chromium.launch(headless=False)
     page = browser.new_page()
-    page.goto("https://e-book.icsi.edu/Default.aspx?page=rules")
-    page.wait_for_load_state('domcontentloaded')
-    page.wait_for_selector("table#rg_rules_ctl00", timeout=60000)
 
-    rule_rows = page.locator("table#rg_rules_ctl00 tbody tr")
-    total_rules = rule_rows.count()
-    options = {
-        'encoding': 'UTF-8'
-    }
+    rule_pages = [
+        "https://e-book.icsi.edu/Default.aspx?page=rules",
+        "https://e-book.icsi.edu/Default.aspx?page=rules&rg_rulesChangePage=2"
+    ]
 
-    for i in range(total_rules):
-        page.goto("https://e-book.icsi.edu/Default.aspx?page=rules")
-        print(f"🔹 Clicking Rule Row #{i}")
-        page.click(f"#rg_rules_ctl00__{i}")
-        time.sleep(2)
+    for page_url in rule_pages:
+        page.goto(page_url)
+        page.wait_for_load_state('domcontentloaded')
+        page.wait_for_selector("table#rg_rules_ctl00", timeout=60000)
 
-        subrule_rows = page.locator("table#rg_rules_ctl00 tbody tr")
-        total_subrules = subrule_rows.count()
+        print(f"📄 Processing: {page_url}")
+        rule_rows = page.locator("table#rg_rules_ctl00 tbody tr")
+        total_rules = rule_rows.count()
+        options = {'encoding': 'UTF-8'}
 
-        for j in range(total_subrules):
-            sub_rows = page.locator("table#rg_rules_ctl00 tbody tr")  # Refresh
-            sub_row = sub_rows.nth(j)
-            sub_title = sub_row.inner_text().strip()
-            print(f"   🔸 Clicking Sub-Rule: {sub_title}")
-            sub_row.click()
+        for i in range(total_rules):
+            rule_rows = page.locator("table#rg_rules_ctl00 tbody tr")
+            print(f"🔹 Clicking Rule Row #{i}")
+            rule_rows.nth(i).click()
             time.sleep(2)
 
-            # Get the iframe's src
-            soup = BeautifulSoup(page.content(), "html.parser")
-            iframe_tag = soup.find('iframe', {"name": "RadWindow1"})
+            subrule_rows = page.locator("table#rg_rules_ctl00 tbody tr")
+            total_subrules = subrule_rows.count()
 
-            if not iframe_tag:
-                print("      ❌ No iframe found.")
-                continue
+            for j in range(total_subrules):
+                sub_rows = page.locator("table#rg_rules_ctl00 tbody tr")  # Refresh
+                sub_row = sub_rows.nth(j)
+                sub_title = sub_row.inner_text().strip()
+                print(f"   🔸 Clicking Sub-Rule: {sub_title}")
+                sub_row.click()
+                time.sleep(2)
 
-            src = iframe_tag.get('src')
-            absolute_src = urljoin("https://e-book.icsi.edu/", src)
+                # Get iframe src
+                soup = BeautifulSoup(page.content(), "html.parser")
+                iframe_tag = soup.find('iframe', {"name": "RadWindow1"})
 
-            try:
-                response = requests.get(absolute_src)
-                response.raise_for_status()
-                html = response.text
+                if not iframe_tag:
+                    print("      ❌ No iframe found.")
+                    continue
 
-                filename = sanitize_filename(sub_title) + ".pdf"
-                output_path = output_dir / filename
-                pdfkit.from_string(html, str(output_path), configuration=config, options=options)
+                src = iframe_tag.get('src')
+                absolute_src = urljoin("https://e-book.icsi.edu/", src)
 
-                print(f"      ✅ Saved to {filename}")
-            except OSError as e:
-                if 'ProtocolUnknownError' in str(e):
-                    print("PDF likely generated, but wkhtmltopdf reported a non-fatal ProtocolUnknownError.")
-                else:
+                try:
+                    response = requests.get(absolute_src)
+                    response.raise_for_status()
+                    html = response.text
+
+                    filename = sanitize_filename(sub_title) + ".pdf"
+                    output_path = output_dir / filename
+                    pdfkit.from_string(html, str(output_path), configuration=config, options=options)
+
+                    print(f"      ✅ Saved to {filename}")
+                except OSError as e:
+                    if 'ProtocolUnknownError' in str(e):
+                        print("PDF likely generated, but wkhtmltopdf reported a non-fatal ProtocolUnknownError.")
+                    else:
+                        print(f"      ❌ Error saving PDF for {sub_title}: {e}")
+                except Exception as e:
                     print(f"      ❌ Error saving PDF for {sub_title}: {e}")
-            except Exception as e:
-                print(f"      ❌ Error saving PDF for {sub_title}: {e}")
 
-            # Close the modal popup
-            try:
-                page.click("a.rwCloseButton")
-                page.wait_for_selector("iframe[name='RadWindow1']", state="hidden", timeout=10000)
-            except Exception as e:
-                print(f"      ⚠️ Could not close modal cleanly, continuing...")
-        
+                # Close modal
+                try:
+                    page.click("a.rwCloseButton")
+                    page.wait_for_selector("iframe[name='RadWindow1']", state="hidden", timeout=10000)
+                except Exception:
+                    print(f"      ⚠️ Could not close modal cleanly, continuing...")
+
     print("✅ All rules scraped.")
     browser.close()
 
