@@ -26,6 +26,7 @@ with sync_playwright() as p:
     browser = p.chromium.launch(headless=False)
     page = browser.new_page()
     page.goto("https://e-book.icsi.edu/Default.aspx?page=rules")
+    page.wait_for_load_state('domcontentloaded')
     
     # Optional debug
     page.screenshot(path="debug.png")
@@ -36,18 +37,16 @@ with sync_playwright() as p:
 
     rule_rows = page.locator("table#rg_rules_ctl00 tbody tr")
     total_rules = rule_rows.count()
+    print(rule_rows.count())
 
     for i in range(total_rules):
-        rule_rows = page.locator("table#rg_rules_ctl00 tbody tr")  # Refresh in case of reload
-        row = rule_rows.nth(i)
-        rule_title = row.inner_text().strip()
-        print(f"🔹 Clicking Rule: {rule_title}")
+        page.click(f"#rg_rules_ctl00__{i}")
 
-        row.click()
+        # Change the selectors here:
         page.wait_for_selector(f"table#rg_rules_ctl00__{i}", timeout=60000)  # Wait for sub-rule table
         
         # Now on sub-rules table
-        page.wait_for_selector(f"table#rg_rules_ctl00__{i}")
+        # page.wait_for_selector(f"table#rg_rules_ctl00__{i}")
         sub_rows = page.locator(f"table#rg_rules_ctl00__{i} tbody tr")
         sub_count = sub_rows.count()
 
