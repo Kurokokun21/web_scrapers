@@ -29,6 +29,9 @@ with sync_playwright() as p:
 
     rule_rows = page.locator("table#rg_rules_ctl00 tbody tr")
     total_rules = rule_rows.count()
+    options = {
+        'encoding': 'UTF-8'
+    }
 
     for i in range(total_rules):
         page.goto("https://e-book.icsi.edu/Default.aspx?page=rules")
@@ -65,18 +68,23 @@ with sync_playwright() as p:
 
                 filename = sanitize_filename(sub_title) + ".pdf"
                 output_path = output_dir / filename
-                pdfkit.from_string(html, str(output_path), configuration=config)
+                pdfkit.from_string(html, str(output_path), configuration=config, options=options)
 
                 print(f"      ✅ Saved to {filename}")
+            except OSError as e:
+                if 'ProtocolUnknownError' in str(e):
+                    print("PDF likely generated, but wkhtmltopdf reported a non-fatal ProtocolUnknownError.")
+                else:
+                    print(f"      ❌ Error saving PDF for {sub_title}: {e}")
             except Exception as e:
                 print(f"      ❌ Error saving PDF for {sub_title}: {e}")
 
             # Close the modal popup
             try:
-                page.wait_for_selector("iframe[name='RadWindow1']", state="detached", timeout=10000)
                 page.click("a.rwCloseButton")
-            except:
-                print("      ⚠️ Could not close modal cleanly, continuing...")
+                page.wait_for_selector("iframe[name='RadWindow1']", state="hidden", timeout=10000)
+            except Exception as e:
+                print(f"      ⚠️ Could not close modal cleanly, continuing...")
         
     print("✅ All rules scraped.")
     browser.close()
