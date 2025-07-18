@@ -66,7 +66,7 @@ def download_as_pdf(pdf_url: str, download_dir: str, headers: dict[str, str], na
             if "application/pdf" not in response.headers.get("content-type", ""):
                 print("Did not receive a PDF. Response content-type:", response.headers.get("content-type"))
                 print("Response text:", response.text[:500])  # Print first 500 chars for debugging
-                break
+                backoff_retry(attempt)
             break
         except requests.exceptions.RequestException as e:
             print(f"Error: {e}")
