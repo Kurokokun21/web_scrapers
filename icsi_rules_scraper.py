@@ -67,6 +67,7 @@ def download_as_pdf(pdf_url: str, download_dir: str, headers: dict[str, str], na
                 print("Did not receive a PDF. Response content-type:", response.headers.get("content-type"))
                 print("Response text:", response.text[:500])  # Print first 500 chars for debugging
                 backoff_retry(attempt)
+                continue
             break
         except requests.exceptions.RequestException as e:
             print(f"Error: {e}")
